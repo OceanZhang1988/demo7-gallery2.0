@@ -1,0 +1,30 @@
+<html>
+<head>
+    <title>Simple Typescript Assignment</title>
+    <meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <script src="assets/lib/ammo.wasm.js"></script>
+    <script>
+        Ammo().then(() => {});
+        if(typeof AudioContext != 'undefined' || typeof webkitAudioContext != 'undefined'){
+        var resumeAudio = function(){
+            var g_WebAudioContext = new AudioContext();
+            if(typeof g_WebAudioContext == 'undefined' || g_WebAudioContext == null)return;
+            if(g_WebAudioContext.state == 'suspended')g_WebAudioContext.resume();
+            document.removeEventListener('click',resumeAudio);
+        }
+        document.addEventListener('click',resumeAudio);
+        }
+        </script>
+    
+    <script src="/utils/throttle.js"></script>
+    <meta charset="UTF-8">
+  <script type="module" crossorigin src="./assets/index.c0bbce24.js"></script>
+  <link rel="modulepreload" href="./assets/vendor.2a034b62.js">
+  <link rel="stylesheet" href="./assets/index.3f77a863.css">
+</head>
+<body >
+    <div id="drawing"></div>
+    
+</body>
+</html>
