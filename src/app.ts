@@ -35,7 +35,7 @@ class Drawing extends DrawingCommon {
         //this.orbitControl.maxDistance = 500;
 
         this.orbitControl.maxPolarAngle = Math.PI / 2;
-        this.orbitControl.target =  this.character.miku.position;
+        //this.orbitControl.target =  this.character.miku.position;
         // this.animationMixer = this.scene.userData["animationMixer"];
         
     }
