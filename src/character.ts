@@ -2,7 +2,8 @@
 import * as THREE from 'three'
 import { MMDLoader } from 'three/examples/jsm/loaders/MMDLoader';
 import { MMDAnimationHelper} from 'three/examples/jsm/animation/MMDAnimationHelper';
-import { AnimationAction, AnimationClip, AnimationMixer, MathUtils, MeshToonMaterial, SkinnedMesh } from 'three';
+import { AnimationAction, AnimationClip, AnimationMixer, MathUtils, Mesh, MeshToonMaterial, SkinnedMesh, Vector3 } from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 //@ts-ignore
 const Ammo = window.Ammo;
@@ -53,11 +54,13 @@ export class Character  {
     debug: boolean = false;
     ready: boolean  = false;
 
+    orbitControl: OrbitControls;
+
     walkEnabled: boolean = false;
 
-    constructor (scene: THREE.Scene, camera: THREE.Camera) {
+    constructor (scene: THREE.Scene, camera: THREE.Camera, control: OrbitControls) {
 
-        
+        this.orbitControl = control;
 
         this.modelParams = [
             {
@@ -95,8 +98,13 @@ export class Character  {
         ];
 
         this.poses = {};
+        //@ts-ignore
+        this.helper = new MMDAnimationHelper({sync: true, afterglow: 2.0, pmxAnimation: true});
+        this.helper.enable("physics", true);
+        this.helper.enable("ik", true);
+        this.helper.enable("grant", true);
 
-        this.helper = new MMDAnimationHelper({sync: true, afterglow: 0.0});
+        console.log(this.helper);
 		this.loader = new MMDLoader();
         this.scene = scene;
         this.camera = camera;
@@ -110,7 +118,7 @@ export class Character  {
         return this.mixer;
     }
 
-    getMiku() {
+    initMiku() {
         //environment group under root
         const miku: THREE.Group = new THREE.Group();
         miku.name = "character";
@@ -122,28 +130,54 @@ export class Character  {
             this.modelParams[0].file,
             // called when the resource is loaded
             function ( mmd: THREE.SkinnedMesh ) {
-                self.mixer = new THREE.AnimationMixer(mmd);
-            
                 self.miku = mmd;
                 self.miku.castShadow = true;
 
                 self.miku.traverse(function(child){
-                    if ( child instanceof SkinnedMesh ) {
+                    if ( child instanceof Mesh ) {
                         child.material.forEach( (material: MeshToonMaterial) => {
-                            if (material.map && material.gradientMap) {
-                                material.map.encoding = THREE.sRGBEncoding;
-                                material.gradientMap.encoding = THREE.sRGBEncoding;
-                                material.shininess = 4;
+                            if (material.emissiveMap) {
+                                material.emissiveMap.encoding = THREE.sRGBEncoding;
                             }
+
+                            if (material.aoMap) {
+                                material.aoMap.encoding = THREE.sRGBEncoding;
+                            }
+
+                            if (material.lightMap) {
+                                material.lightMap.encoding = THREE.sRGBEncoding;
+                            }
+
+                            if (material.gradientMap) {
+                                material.gradientMap.encoding = THREE.sRGBEncoding;
+                                
+                            }
+                            if (material.map ) {
+                                material.map.encoding = THREE.sRGBEncoding;
+
+                                //material.map.mapping = THREE.EquirectangularReflectionMapping;
+                                //material.gradientMap.mapping = THREE.EquirectangularReflectionMapping;
+                                //material.shininess = 0.1
+                                //material.emissiveIntensity = 1
+                                //material.color = material.color.convertSRGBToLinear();
+                            }
+                            material.color.encoding = THREE.sRGBEncoding;
+                            material.emissive.encoding = THREE.sRGBEncoding;
+
+                            material.dithering = true;
+                            //material.shininess = 5;
+                            material.needsUpdate = true;       
                         });
-                        //console.log(child.map);
+                        console.log(child.material);
                     }
                 });
                 console.log("model material:", self.miku.material);
                 
                 self.miku.scale.set(2,2,2);
+                self.miku.position.add( self.modelParams[0].position);
+
                 self.scene.add( self.miku );
-                self.miku.position.add( self.modelParams[0].position)
+                self.mixer = new THREE.AnimationMixer(mmd);
 
                 self.loader.loadAnimation(self.motionParams[0].files[0], self.miku, function (vmd){
                     console.log(self.mixer);
@@ -197,22 +231,7 @@ export class Character  {
                 // console.log("前进");
                 //globalCharacter.miku.rotateOnAxis(new Vector3(0,1,0),90);
                 globalCharacter.motionStatus.inMovingForward = true;
-                //globalCharacter.motionStatus.inStartWalking = true;
-                
-                //const action = globalCharacter.motionDictionary['walk'];
-
-                // action.loop = THREE.LoopOnce;
-                // action.clampWhenFinished = true;
-                // action.reset().setEffectiveTimeScale( 1 )
-                //             .setEffectiveWeight( 1 ).fadeIn( 0.5 ).play();
-
-                //globalCharacter.mixer.update(clock.getDelta());
-
-                //globalCharacter.mixer.addEventListener('loop', globalCharacter.actionDone);
-               
-                // globalCharacter.miku.position.x += 1;
-                // action.stop();
-                //this.motionStatus.inMovingForward = true;
+          
                 break;
 
             case "ArrowRight": // right
@@ -253,12 +272,7 @@ export class Character  {
             case "ArrowUp": // up
                 //console.log("arrow up松开了");
                 globalCharacter.motionStatus.inMovingForward = false;
-                //globalCharacter.motionStatus.inStartWalking = false;
-                //globalCharacter.miku.position.z += 1;
-                 // The animation finished playing
                 
-                // const action = globalCharacter.motionDictionary['walk'];
-                // action.stop();
                 break;
 
             case "ArrowRight": // right
@@ -293,7 +307,7 @@ export class Character  {
 
     manageMove(delta: number){
 
-        let speed = 0.3 * delta * 60;
+        let speed = 0.4 * delta * 60;
 
         let isMoving = this.motionStatus.inMovingForward || this.motionStatus.inMovingBackward;
 		let isRotating = this.motionStatus.inRotatingLeft || this.motionStatus.inRotatingRight;
@@ -315,12 +329,18 @@ export class Character  {
                 this.miku.position.z += dz;
                 this.miku.position.x += dx;
 
+                this.camera.position.z += dz;
+                this.camera.position.x += dx;
+
             }
 
             if ( this.motionStatus.inMovingBackward ) {
 
                 this.miku.position.z -= dz;
                 this.miku.position.x -= dx;
+
+                this.camera.position.z -= dz;
+                this.camera.position.x -= dx;
 
             }
 
@@ -334,39 +354,47 @@ export class Character  {
 
                 this.motionStatus.direction += dr;
                 this.miku.rotateY( dr );
-
             }
 
             if ( this.motionStatus.inRotatingRight ) {
 
                 this.motionStatus.direction -= dr;
                 this.miku.rotateY( -dr );
-
             }
 
         }
-
+        
+        // if (delta < 1000/60) {
+        //     return;
+        // }
 
         if (isMoving && !this.walkEnabled) {
+            console.log("call once!");
             this.helper.enable("animation", true);
-            //this.helper.enable("physics", true);
+            this.helper.enable("physics", true);
             this.helper.enable("ik", true);
             this.helper.enable("grant", true);
+
+            
             this.walkEnabled = true;
+
         } else if(!isMoving) {
             this.helper.enable("animation", false);
-            //this.helper.enable("physics", false);
+            this.helper.enable("physics", false);
             this.helper.enable("ik", false);
             this.helper.enable("grant", false);
+           
             this.walkEnabled = false;
+           
+            if (globalCharacter.motionDictionary['walk']) {
+                const action = globalCharacter.motionDictionary['walk'];
+                action.stop();
+            }
+           
         }
         
         this.helper.update(delta);
         this.camera.lookAt(this.miku.position);
-        // this.camera.position.x = Math.sqrt(Math.pow(this.miku.position.x,2) - 10);
-        // this.camera.position.y = Math.sqrt(Math.pow(this.miku.position.y,2) - 10);
-        // this.camera.position.z = Math.sqrt(Math.pow(this.miku.position.z,2) - 10);
-
     }
 
 

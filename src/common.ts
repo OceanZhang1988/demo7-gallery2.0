@@ -1,6 +1,13 @@
 import * as THREE from 'three'
 // import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import {OutlineEffect} from 'three/examples/jsm/effects/OutlineEffect'
+import {OutlineEffect} from 'three/examples/jsm/effects/OutlineEffect';
+import {EffectComposer} from 'three/examples/jsm/postprocessing/EffectComposer';
+import {RenderPass} from 'three/examples/jsm/postprocessing/RenderPass';
+import {ShaderPass} from 'three/examples/jsm/postprocessing/ShaderPass';
+import {OutlinePass} from 'three/examples/jsm/postprocessing/OutlinePass';
+import {GammaCorrectionShader} from 'three/examples/jsm/shaders/GammaCorrectionShader';
+
+
 
 export class DrawingCommon {
     private _boundHandleFrame: (t: DOMHighResTimeStamp) => any;
@@ -10,13 +17,15 @@ export class DrawingCommon {
 
     // DOM items
     glCanvas = document.createElement('canvas')
-	glContext: WebGLRenderingContext;
+	glContext: WebGL2RenderingContext;
 
     // Three.js items
     scene = new THREE.Scene() 
     camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 1000 );
     renderer: THREE.WebGLRenderer;
     effect: OutlineEffect;
+
+    composer: EffectComposer;
 
     constructor(public el: HTMLElement){
         // make it a method that's bound to this object
@@ -30,11 +39,11 @@ export class DrawingCommon {
         // define scene view
         this.scene.background = new THREE.Color( 0xcccccc );
 
-        this.camera.position.set(0, 20, 12);
+        this.camera.position.set(40, 45, 100);
 		this.scene.add(this.camera)
 
 		// Create a canvas and context for the session layer
-		let ctx = this.glCanvas.getContext('webgl')
+		let ctx = this.glCanvas.getContext('webgl2')
         if (!ctx) {
             throw new Error("Cannot create WebGL render context in common.ts")
         }
@@ -52,18 +61,34 @@ export class DrawingCommon {
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.outputEncoding = THREE.sRGBEncoding;
-
-        //effect
-
-        this.effect = new OutlineEffect( this.renderer );
-
+        this.renderer.toneMapping = THREE.NoToneMapping;
+        this.renderer.toneMappingExposure = 1;
+        
+        console.log("webgl2?",this.renderer.capabilities.isWebGL2);
         // update the camera
         this.camera.aspect = this.glCanvas.offsetWidth / this.glCanvas.offsetHeight;
         this.camera.updateProjectionMatrix();
 
         // just ambient light
-		const ambientLight = new THREE.AmbientLight( 0x666666, 1 );
+		const ambientLight = new THREE.AmbientLight( 0x666666, 0.8);
 		this.scene.add( ambientLight );
+
+        //post processing
+        this.composer = new EffectComposer( this.renderer );
+		this.composer.addPass( new RenderPass( this.scene, this.camera ) );
+
+        this.composer.addPass(new ShaderPass(GammaCorrectionShader));
+
+        const outlinePass = new OutlinePass( 
+            new THREE.Vector2( window.innerWidth, window.innerHeight ), this.scene, this.camera );
+		this.composer.addPass( outlinePass );
+
+		// const effect2 = new ShaderPass( RGBShiftShader );
+		// effect2.uniforms[ 'amount' ].value = 0.0015;
+		// this.composer.addPass( effect2 );
+        
+        //effect
+        this.effect = new OutlineEffect(this.renderer);
 
 		// Give extending classes the opportunity to initially populate the scene
 		this.initializeScene()
@@ -72,6 +97,9 @@ export class DrawingCommon {
             this.camera.aspect = this.el.offsetWidth / this.el.offsetHeight;
             this.camera.updateProjectionMatrix();
             this.renderer.setSize( this.el.offsetWidth, this.el.offsetHeight );
+            this.effect.setSize( this.el.offsetWidth, this.el.offsetHeight );
+
+			//this.composer.setSize( this.el.offsetWidth, this.el.offsetHeight  );
         });
 
         window.requestAnimationFrame(this._boundHandleFrame)
@@ -117,6 +145,8 @@ export class DrawingCommon {
     }
 
 	doRender() {
-		this.renderer.render(this.scene, this.camera)
+		//this.renderer.render(this.scene, this.camera);
+        this.effect.render(this.scene, this.camera);
+        //this.composer.render();
 	}
 }

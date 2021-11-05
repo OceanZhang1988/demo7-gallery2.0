@@ -21,9 +21,22 @@ class Drawing extends DrawingCommon {
 
     constructor (canv: HTMLElement) {
         super (canv)
-        
-        this.orbitControl = this.scene.userData["OrbitControls"];
+
         this.character = this.scene.userData["character"];
+
+        this.orbitControl = this.scene.userData["OrbitControls"];
+        this.orbitControl.listenToKeyEvents( window ); // optional
+        this.orbitControl.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+        this.orbitControl.dampingFactor = 0.05;
+
+        this.orbitControl.screenSpacePanning = false;
+        this.orbitControl.enableRotate = true;
+
+        //this.orbitControl.minDistance = 100;
+        //this.orbitControl.maxDistance = 500;
+
+        this.orbitControl.maxPolarAngle = Math.PI / 2;
+        this.orbitControl.target =  this.character.miku.position;
         // this.animationMixer = this.scene.userData["animationMixer"];
         
     }
@@ -33,40 +46,20 @@ class Drawing extends DrawingCommon {
         // lights
 
         const directionalLight = new THREE.DirectionalLight( 0x887766, 1);
-		directionalLight.position.set( - 1, 1, 1 ).normalize();
+		directionalLight.position.set( -1, 1, 1 ).normalize();
+        directionalLight.castShadow = true;
+        //directionalLight.target.position.set(50, 0,  0);
+        //this.scene.add( directionalLight.target );
 		this.scene.add( directionalLight );
-
-
-		// const dirLight = new THREE.DirectionalLight( 0xffffff, 0.5);
-        // dirLight.position.set(10, 50, 1).normalize();
-        // dirLight.castShadow = true;
-
-        // dirLight.shadow.mapSize.width = 1024;
-        // dirLight.shadow.mapSize.height = 1024;
-
-        // const d = 10;
-
-        // dirLight.shadow.camera.left = - d;
-        // dirLight.shadow.camera.right = d;
-        // dirLight.shadow.camera.top = d;
-        // dirLight.shadow.camera.bottom = - d;
-
-        // dirLight.shadow.camera.far = 2000;
-        // dirLight.shadow.camera.near = 0.1;
-        // dirLight.shadow.bias = - 0.0001;
-        
-        // dirLight.target.position.set(30, 0,  0);
-
-        // this.scene.add( dirLight.target );
-        // this.scene.add( dirLight );
+		
         this.scene.add(new THREE.CameraHelper(directionalLight.shadow.camera));
 
 
-        // const skyColor = 0xffffff;  // light blue
-        // const groundColor = 0xffffff;  // brownish orange
-        // const intensity = 0.1;
-        // const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
-        // this.scene.add(light);
+        const skyColor = 0x887766;  // light blue
+        const groundColor = 0x887766;  // brownish orange
+        const intensity = 0.1;
+        const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
+        this.scene.add(light);
 
     }
 
@@ -91,20 +84,31 @@ class Drawing extends DrawingCommon {
 
         const controls = new OrbitControls(this.camera, this.glCanvas);
         this.scene.userData["OrbitControls"] = controls;
-        controls.target.set(0, 20, 0);
+        
+
         controls.enableKeys = false;
 
         // this.scene.add( new THREE.AxesHelper(500));
 
         //trial
-        this.scene.userData["character"] = new Character(this.scene, this.camera);
-        this.scene.userData["character"].getMiku();
+        this.scene.userData["character"] = new Character(this.scene, this.camera, this.orbitControl);
+        this.scene.userData["character"].initMiku();
+
     }
 
 	/*
 	Update the scene during requestAnimationFrame callback before rendering
 	*/
 	updateScene(time: DOMHighResTimeStamp){
+        // this.orbitControl.center =  new THREE.Vector3(
+        //     this.character.miku.position.x,
+        //     this.character.miku.position.y,
+        //     this.character.miku.position.z,
+        // );
+        if (this.character.miku) {
+            this.orbitControl.target.set(this.character.miku.position.x
+                , this.character.miku.position.y, this.character.miku.position.z);
+        }
         this.orbitControl.update();
         if (this.lastTime == -1) {
             this.lastTime = time;
