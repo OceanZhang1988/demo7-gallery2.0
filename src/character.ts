@@ -380,9 +380,9 @@ export class Character  {
 
         } else if(!isMoving) {
             this.helper.enable("animation", false);
-            this.helper.enable("physics", false);
-            this.helper.enable("ik", false);
-            this.helper.enable("grant", false);
+            // this.helper.enable("physics", false);
+            // this.helper.enable("ik", false);
+            // this.helper.enable("grant", false);
            
             this.walkEnabled = false;
            
