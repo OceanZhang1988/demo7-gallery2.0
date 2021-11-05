@@ -4,7 +4,6 @@ import { Environment } from './gallery';
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Character } from './character';
-import { MMDAnimationHelper } from 'three/examples/jsm/animation/MMDAnimationHelper';
 
 const clock = new THREE.Clock();
 
@@ -25,7 +24,7 @@ class Drawing extends DrawingCommon {
         this.character = this.scene.userData["character"];
 
         this.orbitControl = this.scene.userData["OrbitControls"];
-        this.orbitControl.listenToKeyEvents( window ); // optional
+        //this.orbitControl.listenToKeyEvents( window ); // optional
         this.orbitControl.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
         this.orbitControl.dampingFactor = 0.05;
 
