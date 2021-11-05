@@ -31,10 +31,11 @@ class Drawing extends DrawingCommon {
         this.orbitControl.screenSpacePanning = false;
         this.orbitControl.enableRotate = true;
 
-        //this.orbitControl.minDistance = 100;
-        //this.orbitControl.maxDistance = 500;
+        this.orbitControl.minDistance = 100;
+        this.orbitControl.maxDistance = 150;
 
-        this.orbitControl.maxPolarAngle = Math.PI / 2;
+        this.orbitControl.maxPolarAngle = Math.PI / 2.2;
+        this.orbitControl.minPolarAngle = Math.PI / 3.2;
         //this.orbitControl.target =  this.character.miku.position;
         // this.animationMixer = this.scene.userData["animationMixer"];
         
@@ -113,10 +114,9 @@ class Drawing extends DrawingCommon {
             this.lastTime = time;
         }
         let delta = (time - this.lastTime) / 1000;
+        
         if(this.character.getMixer()){
             this.character.manageMove(delta);
-            //this.character.mixer.update(delta);
-            //this.character.manageMove(delta)
         }
 
         this.lastTime = time;

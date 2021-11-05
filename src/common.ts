@@ -39,7 +39,7 @@ export class DrawingCommon {
         // define scene view
         this.scene.background = new THREE.Color( 0xcccccc );
 
-        this.camera.position.set(40, 45, 100);
+        this.camera.position.set(40, 50, 100);
 		this.scene.add(this.camera)
 
 		// Create a canvas and context for the session layer

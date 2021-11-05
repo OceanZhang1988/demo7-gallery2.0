@@ -24,7 +24,7 @@ export class Character  {
 
     scene: THREE.Scene;
     camera: THREE.Camera;
-    mixer!: THREE.AnimationMixer;
+    mixer!: THREE.AnimationMixer | undefined;
     clips!: THREE.AnimationClip[];
 
     motionStatus = {
@@ -49,10 +49,12 @@ export class Character  {
 
     boneDictionary: Record<string, number> = {};
     modelDictionary: Record<string, number> = {};
-    motionDictionary: Record<string, AnimationAction> = {};
+    motionDictionary: Record<string, AnimationClip> = {};
     poses: Record<string, any>;
     debug: boolean = false;
     ready: boolean  = false;
+
+    turnAround: boolean = false;
 
     orbitControl: OrbitControls;
 
@@ -99,10 +101,12 @@ export class Character  {
 
         this.poses = {};
         //@ts-ignore
-        this.helper = new MMDAnimationHelper({sync: true, afterglow: 2.0, pmxAnimation: true});
+        this.helper = new MMDAnimationHelper({sync: true, afterglow: 0, pmxAnimation: true, resetPhysicsOnLoop: true});
         this.helper.enable("physics", true);
         this.helper.enable("ik", true);
         this.helper.enable("grant", true);
+        this.helper.sharedPhysics = false;
+        
 
         console.log(this.helper);
 		this.loader = new MMDLoader();
@@ -181,14 +185,17 @@ export class Character  {
 
                 self.loader.loadAnimation(self.motionParams[0].files[0], self.miku, function (vmd){
                     console.log(self.mixer);
-                    let clip = [vmd as AnimationClip];
+                    let clip = vmd as AnimationClip;
                     
                     self.helper.add( self.miku, {
-                        animation: clip,
+                        animation: [clip],
                         physics: true
                     } );
-                    const action = self.mixer.clipAction(clip[0]);
-                    self.motionDictionary['walk'] = action;
+                    console.log("mixer:", self.helper.objects.get(self.miku)?.mixer)
+                    
+                    self.mixer = self.helper.objects.get(self.miku)?.mixer;
+                    
+                    self.motionDictionary['walk'] = clip;
                 })
             },
             // called when loading is in progresses
@@ -205,7 +212,7 @@ export class Character  {
     actionDone(e: THREE.Event) {
         console.log("监听动作结束", e.target);
         globalCharacter.mixer.removeEventListener('finished', globalCharacter.actionDone);
-        globalCharacter.motionDictionary['walk'].fadeOut(0.5);
+        //globalCharacter.motionDictionary['walk'].fadeOut(0.5);
     }
 
 
@@ -326,6 +333,15 @@ export class Character  {
 
             if ( this.motionStatus.inMovingForward ) {
 
+                if (this.turnAround) {
+                    //this.helper.sharedPhysics = true;
+                   
+                    this.miku.rotateY(Math.PI);
+                    this.turnAround = false;
+
+                    //this.helper.sharedPhysics = false;
+                }
+
                 this.miku.position.z += dz;
                 this.miku.position.x += dx;
 
@@ -335,6 +351,15 @@ export class Character  {
             }
 
             if ( this.motionStatus.inMovingBackward ) {
+                if (!this.turnAround) {
+                   // this.helper.sharedPhysics = true;
+                   
+                    this.miku.rotateY( Math.PI );
+                    this.turnAround = true;
+
+                    //this.helper.sharedPhysics = false;
+                }
+                
 
                 this.miku.position.z -= dz;
                 this.miku.position.x -= dx;
@@ -370,10 +395,13 @@ export class Character  {
 
         if (isMoving && !this.walkEnabled) {
             console.log("call once!");
+            // if (this.helper.sharedPhysics) {
+            //     this.helper.sharedPhysics = false;
+            // }
             this.helper.enable("animation", true);
-            this.helper.enable("physics", true);
-            this.helper.enable("ik", true);
-            this.helper.enable("grant", true);
+            // this.helper.enable("physics", true);
+            // this.helper.enable("ik", true);
+            // this.helper.enable("grant", true);
 
             
             this.walkEnabled = true;
@@ -387,8 +415,9 @@ export class Character  {
             this.walkEnabled = false;
            
             if (globalCharacter.motionDictionary['walk']) {
-                const action = globalCharacter.motionDictionary['walk'];
-                action.stop();
+                const clip = globalCharacter.motionDictionary['walk'];
+                this.mixer?.clipAction(clip).reset();
+                
             }
            
         }
