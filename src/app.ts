@@ -67,8 +67,8 @@ class Drawing extends DrawingCommon {
 	*/
 	initializeScene(){
         console.log("This is ammo:", Ammo);
-        var shape = new Ammo.btBoxShape( new Ammo.btVector3( 1, 1, 1 ) );
-        console.log("This is ammo shape:", shape);
+        //var shape = new Ammo.btBoxShape( new Ammo.btVector3( 1, 1, 1 ) );
+        //console.log("This is ammo shape:", shape);
         
         this.setupLight();
         //the root group
